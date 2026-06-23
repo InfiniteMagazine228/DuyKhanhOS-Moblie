@@ -1,7 +1,9 @@
-name: Build DuyKhanhOS Mobile
+name: Build DuyKhanhOS IMG
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
 
 permissions:
   contents: write
@@ -14,32 +16,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Get latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          sudo apt update
-          sudo apt install -y \
-            xorriso \
-            grub-pc-bin \
-            grub-efi-amd64-bin \
-            mtools \
-            dosfstools \
-            ibus-unikey \
-            squashfs-tools
+          mkdir output
+          URL=$(gh release view \
+            --repo InfiniteMagazine228/DuyKhanhOS-Version-5 \
+            --json assets \
+            -q '.assets[] | select(.name|endswith(".iso")) | .url' | head -1)
 
-      - name: Build IMG
+          wget \
+            --header="Authorization: Bearer $GH_TOKEN" \
+            --header="Accept: application/octet-stream" \
+            "$URL" \
+            -O output/DuyKhanhOS.iso
+
+      - name: Create IMG
         run: |
-          chmod +x scripts/make_img.sh
-          ./scripts/make_img.sh
+          cp output/DuyKhanhOS.iso output/DuyKhanhOS.img
 
-      - name: Build ISO
+      - name: SHA256
         run: |
-          chmod +x scripts/make_iso.sh
-          ./scripts/make_iso.sh
+          sha256sum output/DuyKhanhOS.iso > output/DuyKhanhOS.iso.sha256
+          sha256sum output/DuyKhanhOS.img > output/DuyKhanhOS.img.sha256
 
-      - name: Upload artifacts
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: DuyKhanhOS-Mobile
-          path: |
-            output/DuyKhanhOS-Mobile.img
-            output/DuyKhanhOS-Mobile.iso
+          name: DuyKhanhOS
+          path: output/*
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-build
+          files: |
+            output/DuyKhanhOS.iso
+            output/DuyKhanhOS.img
+            output/DuyKhanhOS.iso.sha256
+            output/DuyKhanhOS.img.sha256
