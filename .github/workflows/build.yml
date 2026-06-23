@@ -1,0 +1,45 @@
+name: Build DuyKhanhOS Mobile
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            xorriso \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            mtools \
+            dosfstools \
+            ibus-unikey \
+            squashfs-tools
+
+      - name: Build IMG
+        run: |
+          chmod +x scripts/make_img.sh
+          ./scripts/make_img.sh
+
+      - name: Build ISO
+        run: |
+          chmod +x scripts/make_iso.sh
+          ./scripts/make_iso.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DuyKhanhOS-Mobile
+          path: |
+            output/DuyKhanhOS-Mobile.img
+            output/DuyKhanhOS-Mobile.iso
